@@ -1,11 +1,10 @@
 {
   "name": "Overflow Budget",
   "short_name": "Overflow",
-  "description": "Personal payday, bill, savings and business budget tracker.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#0d0f11",
-  "theme_color": "#0d0f11",
+  "background_color": "#0e1012",
+  "theme_color": "#0e1012",
   "icons": [
     {
       "src": "icon-192.svg",

@@ -1,192 +1,83 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#111315" />
-  <title>Overflow Budget</title>
-  <link rel="manifest" href="manifest.json?v=2.4" />
-  <link rel="apple-touch-icon" href="icon-192.svg" />
-  <link rel="stylesheet" href="styles.css?v=2.4" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0e1012">
+<title>Overflow</title>
+<link rel="manifest" href="manifest.json?v=3.0">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<link rel="stylesheet" href="styles.css?v=3.0">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <div class="eyebrow">PERSONAL FINANCE</div>
-        <h1>Overflow</h1>
-      </div>
-      <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button>
-    </header>
+<div class="app">
+<header><div><div class="eyebrow">OVERFLOW</div><h1 id="title">Home</h1></div><button id="addBtn" class="round">＋</button></header>
 
-    <main>
-      <section id="home" class="view active">
-        <div class="hero-card">
-          <div class="status-row">
-            <span id="financeStatus" class="status-chip recovery">🔴 Recovery</span>
-            <button id="quickCheckingBtn" class="text-btn">Update checking</button>
-          </div>
-          <div class="hero-label">CURRENT CHECKING</div>
-          <button id="checkingHero" class="checking-hero">$0</button>
-          <div id="balanceFreshness" class="hero-sub">Tap to update balance</div>
-
-          <div class="safe-card">
-            <div class="hero-label">SAFE TO SPEND TODAY</div>
-            <div id="safeToSpend" class="hero-number">$0</div>
-            <div id="safeSub" class="hero-sub">based on cash you actually have now</div>
-          </div>
-
-          <div id="recoveryPanel" class="recovery-panel hidden"></div>
-
-          <div class="mini-grid">
-            <div><span>Next money in</span><strong id="nextPayday">$0</strong></div>
-            <div><span>After payday</span><strong id="afterPayday">$0</strong></div>
-            <div><span>Overflow now</span><strong id="overflowNow">$0</strong></div>
-            <div><span>30-day projected</span><strong id="projectedBalance">$0</strong></div>
-          </div>
-        </div>
-
-        <section class="card">
-          <div class="section-head">
-            <h2>Quick decision</h2>
-            <span class="pill">Can I afford it?</span>
-          </div>
-          <div class="purchase-row">
-            <div class="input-money"><span>$</span><input id="purchaseAmount" inputmode="decimal" placeholder="150" /></div>
-            <button id="affordBtn" class="primary">Check</button>
-          </div>
-          <div id="affordResult" class="decision muted">Enter a purchase to see whether it fits safely before your next payday.</div>
-        </section>
-
-        <section class="card">
-          <div class="section-head"><h2>Bills checklist</h2><span class="pill">Next 45 days</span></div>
-          <div id="billChecklist" class="bill-checklist"></div>
-        </section>
-
-        <section class="card">
-          <div class="section-head"><h2>Next paycheck plan</h2><span class="pill">Autopilot</span></div>
-          <div id="paydayPlan" class="split-list"></div>
-        </section>
-
-        <section class="card">
-          <div class="section-head">
-            <h2>Coming up</h2>
-            <button class="text-btn" data-nav="calendar">Calendar</button>
-          </div>
-          <div id="upcomingList" class="event-list"></div>
-        </section>
-
-        <section class="card">
-          <div class="section-head"><h2>This week</h2><span class="pill">Allowance</span></div>
-          <div class="progress-wrap">
-            <div class="progress-copy">
-              <strong id="weeklyRemaining">$0 left</strong>
-              <span id="weeklyDetail">$0 of $0 used</span>
-            </div>
-            <div class="progress"><div id="weeklyBar"></div></div>
-          </div>
-          <button id="addWeeklySpend" class="secondary wide">Add weekly spending</button>
-        </section>
-
-        <section class="card">
-          <div class="section-head"><h2>Buffer goal</h2><span id="bufferDeadline" class="pill">Before Jan 1</span></div>
-          <div class="goal-row"><strong id="bufferCurrent">$250</strong><span>→</span><strong>$1,000</strong></div>
-          <div class="progress"><div id="bufferBar"></div></div>
-          <p id="bufferAdvice" class="muted small"></p>
-        </section>
-      </section>
-
-      <section id="calendar" class="view">
-        <div class="section-title-row"><div><div class="eyebrow">MONEY CALENDAR</div><h2 id="monthTitle">Month</h2></div><div><button id="prevMonth" class="icon-btn">‹</button><button id="nextMonth" class="icon-btn">›</button></div></div>
-        <div class="legend">
-          <span><i class="dot income"></i>Income</span>
-          <span><i class="dot bill"></i>Bill</span>
-          <span><i class="dot debt"></i>Debt</span>
-          <span><i class="dot saving"></i>Savings</span>
-          <span><i class="dot planned"></i>Planned</span>
-        </div>
-        <div class="calendar-card">
-          <div class="weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
-          <div id="calendarGrid" class="calendar-grid"></div>
-        </div>
-        <section class="card"><div class="section-head"><h2>Selected day</h2><span id="selectedDateLabel" class="pill">Today</span></div><div id="selectedDayEvents" class="event-list"></div></section>
-      </section>
-
-      <section id="money" class="view">
-        <div class="section-title-row"><div><div class="eyebrow">ACCOUNTS</div><h2>Your money</h2></div><button id="editBalances" class="primary small-btn">Update</button></div>
-        <div id="accountCards" class="account-grid"></div>
-        <section class="card">
-          <div class="section-head"><h2>Debt</h2><span class="pill">Credit card</span></div>
-          <div class="big-line"><span>Current balance</span><strong id="ccBalance">$800</strong></div>
-          <div class="purchase-row"><div class="input-money"><span>$</span><input id="debtPayment" inputmode="decimal" placeholder="Payment" /></div><button id="payDebt" class="primary">Pay</button></div>
-        </section>
-        <section class="card">
-          <div class="section-head">
-            <h2>Payroll allocation</h2>
-            <button id="editPayrollBtn" class="text-btn">Edit</button>
-          </div>
-          <div id="payrollSummary" class="split-list"></div>
-          <p class="muted small">Adjust this anytime your pay changes or you increase/decrease payroll deductions. Overflow will automatically recalculate the checking deposit.</p>
-        </section>
-      </section>
-
-      <section id="business" class="view">
-        <div class="section-title-row"><div><div class="eyebrow">ECLIPSE COLLECTIBLES</div><h2>Business</h2></div><button id="editBusiness" class="primary small-btn">Update</button></div>
-        <div class="business-hero">
-          <span>Available buying power</span>
-          <strong id="buyingPower">$0</strong>
-          <small>after your protected show reserve</small>
-        </div>
-        <div id="businessCards" class="account-grid"></div>
-        <section class="card">
-          <div class="section-head"><h2>Quick sale</h2><span class="pill">Profit tracker</span></div>
-          <div class="field-grid">
-            <label>Sale price<input id="salePrice" inputmode="decimal" placeholder="0"></label>
-            <label>Your cost<input id="saleCost" inputmode="decimal" placeholder="0"></label>
-          </div>
-          <button id="recordSale" class="primary wide">Record sale</button>
-          <div id="saleResult" class="decision muted">Sales will increase business cash and realized profit.</div>
-        </section>
-      </section>
-
-      <section id="more" class="view">
-        <div class="section-title-row"><div><div class="eyebrow">AUTOPILOT</div><h2>Budget setup</h2></div></div>
-        <section class="card">
-          <div class="section-head"><h2>Recurring bills</h2><button id="addBillBtn" class="text-btn">+ Add</button></div>
-          <div id="billList" class="settings-list"></div>
-        </section>
-        <section class="card">
-          <div class="section-head"><h2>Monthly essentials</h2><span class="pill">Weekly allowance</span></div>
-          <div id="essentialList" class="settings-list"></div>
-        </section>
-        <section class="card">
-          <div class="section-head"><h2>One-time income</h2><button id="addIncomeBtn" class="text-btn">+ Add</button></div>
-          <div id="incomeList" class="settings-list"></div>
-        </section>
-        <section class="card">
-          <div class="section-head"><h2>Notifications</h2></div>
-          <button id="notifyBtn" class="secondary wide">Enable notifications</button>
-          <p class="muted small">The installed iPhone web app can request notification permission. Automated scheduled push delivery requires a hosted push service; this version prepares the app and provides on-open reminders.</p>
-        </section>
-        <section class="card danger-zone">
-          <div class="section-head"><h2>Data</h2></div>
-          <button id="exportBtn" class="secondary wide">Export backup</button>
-          <button id="resetBtn" class="danger wide">Reset to my starting plan</button>
-        </section>
-      </section>
-    </main>
-
-    <nav class="tabbar">
-      <button class="tab active" data-nav="home"><span>⌂</span>Home</button>
-      <button class="tab" data-nav="calendar"><span>▦</span>Calendar</button>
-      <button class="tab" data-nav="money"><span>◉</span>Money</button>
-      <button class="tab" data-nav="business"><span>◐</span>Eclipse</button>
-      <button class="tab" data-nav="more"><span>•••</span>More</button>
-    </nav>
+<main>
+<section id="home" class="view active">
+  <div class="hero">
+    <div class="row"><span id="status" class="status">🔴 Recovery</span><button id="editChecking" class="link">Edit balance</button></div>
+    <label>CURRENT BALANCE</label><button id="checking" class="big">$0</button><small id="updated">Tap to update</small>
+    <div class="divider"></div>
+    <label>SAFE TO SPEND</label><button id="safe" class="big gold">$0</button><small>Available today</small>
+    <div class="two">
+      <div><span>Next money in</span><strong id="nextMoney">$0</strong><small id="nextMoneyDate">—</small></div>
+      <div><span>Projected after bills</span><strong id="afterBills">$0</strong><small>Before next payday</small></div>
+    </div>
   </div>
 
-  <dialog id="modal"><form method="dialog" id="modalForm"><div id="modalContent"></div></form></dialog>
+  <div class="card">
+    <div class="row"><h2>Quick decision</h2><span class="pill">Can I afford it?</span></div>
+    <div class="quick"><div class="moneyinput">$ <input id="quickAmount" inputmode="decimal" placeholder="150"></div><button id="quickCheck" class="primary">Check</button></div>
+    <div id="quickResult" class="result muted">Enter an amount for a quick answer.</div>
+  </div>
 
-  <script src="app.js?v=2.4"></script>
+  <div class="card">
+    <div class="row"><h2>Buffer</h2><button id="editBuffer" class="link">Edit</button></div>
+    <div class="goal"><strong id="bufferNow">$250</strong><span>→</span><strong id="bufferGoal">$1,000</strong></div>
+    <div class="progress"><i id="bufferBar"></i></div>
+    <small id="bufferNext">Next milestone: $500</small>
+  </div>
+</section>
+
+<section id="bills" class="view">
+  <div class="stats"><div><span>This month</span><strong id="billTotal">$0</strong></div><div><span>Paid</span><strong id="billPaid">$0</strong></div><div><span>Remaining</span><strong id="billRemain">$0</strong></div></div>
+  <div class="card"><div class="row"><h2>Bill checklist</h2><button id="newBill" class="link">+ Add</button></div><div id="billList"></div></div>
+</section>
+
+<section id="calendar" class="view">
+  <div class="row month"><button id="prev" class="round plain">‹</button><h2 id="monthName"></h2><button id="next" class="round plain">›</button></div>
+  <div class="calendar"><div class="week"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div id="calendarGrid" class="grid"></div></div>
+  <div class="card"><div class="row"><h2>Coming up</h2><span class="pill">Next 30 days</span></div><div id="coming"></div></div>
+</section>
+
+<section id="allocate" class="view">
+  <div class="card"><div class="row"><h2>Money jobs</h2><button id="whyJobs" class="link">Why?</button></div><div class="jobs"><div><span>Bills</span><strong id="jobBills">$0</strong></div><div><span>Planned spending</span><strong id="jobSpend">$0</strong></div><div><span>Buffer</span><strong id="jobBuffer">$0</strong></div><div><span>Free</span><strong id="jobFree" class="goldtext">$0</strong></div></div></div>
+  <div class="card"><div class="row"><h2>Next paycheck</h2><button id="editPayroll" class="link">Edit payroll</button></div><div id="payPlan" class="lines"></div></div>
+  <div class="card"><div class="row"><h2>This pay cycle</h2><button id="resetCycle" class="link">Reset</button></div><div id="plannedList"></div><button id="addSpend" class="secondary full">+ Add spending</button></div>
+  <div class="card"><div class="row"><h2>Accounts</h2><button id="editBalances" class="link">Edit</button></div><div id="accounts" class="accounts"></div></div>
+  <div class="card"><div class="row"><h2>Future</h2><button id="editGoals" class="link">Edit goals</button></div><div id="goals"></div></div>
+  <div class="card"><div class="row"><h2>History</h2><button id="backup" class="link">Backup</button></div><div id="history"></div><button id="restore" class="secondary full">Import backup</button><input id="restoreFile" type="file" accept="application/json" hidden></div>
+</section>
+
+<section id="eclipse" class="view">
+  <div class="hero"><label>ECLIPSE COLLECTIBLES</label><div class="big" id="bizValue">$0</div><small>Total business value</small></div>
+  <div id="bizCards" class="accounts"></div>
+  <div class="card"><div class="row"><h2>Quick buy</h2><span class="pill">Vendor math</span></div><div class="twocol"><label>Market value<input id="market" inputmode="decimal" placeholder="500"></label><label>Buy %<input id="pct" inputmode="decimal" value="70"></label></div><div id="offer" class="result muted">Enter market value to calculate a max offer.</div></div>
+  <div class="card"><div class="row"><h2>Quick sale</h2><button id="editBiz" class="link">Edit balances</button></div><div class="twocol"><label>Sale price<input id="sale" inputmode="decimal"></label><label>Your cost<input id="cost" inputmode="decimal"></label></div><button id="recordSale" class="primary full">Record sale</button><div id="saleResult" class="result muted">Sales update business cash and realized profit.</div></div>
+</section>
+</main>
+
+<nav>
+<button class="tab active" data-tab="home">⌂<span>Home</span></button>
+<button class="tab" data-tab="bills">✓<span>Bills</span></button>
+<button class="tab" data-tab="calendar">▦<span>Calendar</span></button>
+<button class="tab" data-tab="allocate">◉<span>Allocate</span></button>
+<button class="tab" data-tab="eclipse">◐<span>Eclipse</span></button>
+</nav>
+</div>
+
+<dialog id="modal"><form method="dialog"><div id="modalBody"></div></form></dialog>
+<script src="app.js?v=3.0"></script>
 </body>
 </html>
