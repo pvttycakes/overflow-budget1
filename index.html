@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111315" />
+  <title>Overflow Budget</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">PERSONAL FINANCE</div>
+        <h1>Overflow</h1>
+      </div>
+      <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button>
+    </header>
+
+    <main>
+      <section id="home" class="view active">
+        <div class="hero-card">
+          <div class="hero-label">SAFE TO SPEND</div>
+          <div id="safeToSpend" class="hero-number">$0</div>
+          <div id="safeSub" class="hero-sub">until next payday</div>
+          <div class="mini-grid">
+            <div><span>Checking</span><strong id="checkingNow">$0</strong></div>
+            <div><span>Overflow</span><strong id="overflowNow">$0</strong></div>
+            <div><span>Next payday</span><strong id="nextPayday">$0</strong></div>
+            <div><span>Projected</span><strong id="projectedBalance">$0</strong></div>
+          </div>
+        </div>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Quick decision</h2>
+            <span class="pill">Can I afford it?</span>
+          </div>
+          <div class="purchase-row">
+            <div class="input-money"><span>$</span><input id="purchaseAmount" inputmode="decimal" placeholder="150" /></div>
+            <button id="affordBtn" class="primary">Check</button>
+          </div>
+          <div id="affordResult" class="decision muted">Enter a purchase to see whether it fits safely before your next payday.</div>
+        </section>
+
+        <section class="card">
+          <div class="section-head">
+            <h2>Coming up</h2>
+            <button class="text-btn" data-nav="calendar">Calendar</button>
+          </div>
+          <div id="upcomingList" class="event-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-head"><h2>This week</h2><span class="pill">Allowance</span></div>
+          <div class="progress-wrap">
+            <div class="progress-copy">
+              <strong id="weeklyRemaining">$0 left</strong>
+              <span id="weeklyDetail">$0 of $0 used</span>
+            </div>
+            <div class="progress"><div id="weeklyBar"></div></div>
+          </div>
+          <button id="addWeeklySpend" class="secondary wide">Add weekly spending</button>
+        </section>
+
+        <section class="card">
+          <div class="section-head"><h2>Buffer goal</h2><span id="bufferDeadline" class="pill">Before Jan 1</span></div>
+          <div class="goal-row"><strong id="bufferCurrent">$250</strong><span>→</span><strong>$1,000</strong></div>
+          <div class="progress"><div id="bufferBar"></div></div>
+          <p id="bufferAdvice" class="muted small"></p>
+        </section>
+      </section>
+
+      <section id="calendar" class="view">
+        <div class="section-title-row"><div><div class="eyebrow">MONEY CALENDAR</div><h2 id="monthTitle">Month</h2></div><div><button id="prevMonth" class="icon-btn">‹</button><button id="nextMonth" class="icon-btn">›</button></div></div>
+        <div class="legend">
+          <span><i class="dot income"></i>Income</span>
+          <span><i class="dot bill"></i>Bill</span>
+          <span><i class="dot debt"></i>Debt</span>
+          <span><i class="dot saving"></i>Savings</span>
+          <span><i class="dot planned"></i>Planned</span>
+        </div>
+        <div class="calendar-card">
+          <div class="weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </div>
+        <section class="card"><div class="section-head"><h2>Selected day</h2><span id="selectedDateLabel" class="pill">Today</span></div><div id="selectedDayEvents" class="event-list"></div></section>
+      </section>
+
+      <section id="money" class="view">
+        <div class="section-title-row"><div><div class="eyebrow">ACCOUNTS</div><h2>Your money</h2></div><button id="editBalances" class="primary small-btn">Update</button></div>
+        <div id="accountCards" class="account-grid"></div>
+        <section class="card">
+          <div class="section-head"><h2>Debt</h2><span class="pill">Credit card</span></div>
+          <div class="big-line"><span>Current balance</span><strong id="ccBalance">$800</strong></div>
+          <div class="purchase-row"><div class="input-money"><span>$</span><input id="debtPayment" inputmode="decimal" placeholder="Payment" /></div><button id="payDebt" class="primary">Pay</button></div>
+        </section>
+        <section class="card">
+          <div class="section-head"><h2>Payday autopilot</h2><span class="pill">Every 2 weeks</span></div>
+          <div class="split-list">
+            <div><span>Paycheck</span><strong>$1,680</strong></div>
+            <div><span>Roth IRA transfer</span><strong>−$100</strong></div>
+            <div><span>HYSA transfer</span><strong>−$100</strong></div>
+            <div><span>401(k) contribution</span><strong>+$100 invested</strong></div>
+            <div class="total"><span>Checking retained</span><strong>$1,480</strong></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="business" class="view">
+        <div class="section-title-row"><div><div class="eyebrow">ECLIPSE COLLECTIBLES</div><h2>Business</h2></div><button id="editBusiness" class="primary small-btn">Update</button></div>
+        <div class="business-hero">
+          <span>Available buying power</span>
+          <strong id="buyingPower">$0</strong>
+          <small>after your protected show reserve</small>
+        </div>
+        <div id="businessCards" class="account-grid"></div>
+        <section class="card">
+          <div class="section-head"><h2>Quick sale</h2><span class="pill">Profit tracker</span></div>
+          <div class="field-grid">
+            <label>Sale price<input id="salePrice" inputmode="decimal" placeholder="0"></label>
+            <label>Your cost<input id="saleCost" inputmode="decimal" placeholder="0"></label>
+          </div>
+          <button id="recordSale" class="primary wide">Record sale</button>
+          <div id="saleResult" class="decision muted">Sales will increase business cash and realized profit.</div>
+        </section>
+      </section>
+
+      <section id="more" class="view">
+        <div class="section-title-row"><div><div class="eyebrow">AUTOPILOT</div><h2>Budget setup</h2></div></div>
+        <section class="card">
+          <div class="section-head"><h2>Recurring bills</h2><button id="addBillBtn" class="text-btn">+ Add</button></div>
+          <div id="billList" class="settings-list"></div>
+        </section>
+        <section class="card">
+          <div class="section-head"><h2>Monthly essentials</h2><span class="pill">Weekly allowance</span></div>
+          <div id="essentialList" class="settings-list"></div>
+        </section>
+        <section class="card">
+          <div class="section-head"><h2>One-time income</h2><button id="addIncomeBtn" class="text-btn">+ Add</button></div>
+          <div id="incomeList" class="settings-list"></div>
+        </section>
+        <section class="card">
+          <div class="section-head"><h2>Notifications</h2></div>
+          <button id="notifyBtn" class="secondary wide">Enable notifications</button>
+          <p class="muted small">The installed iPhone web app can request notification permission. Automated scheduled push delivery requires a hosted push service; this version prepares the app and provides on-open reminders.</p>
+        </section>
+        <section class="card danger-zone">
+          <div class="section-head"><h2>Data</h2></div>
+          <button id="exportBtn" class="secondary wide">Export backup</button>
+          <button id="resetBtn" class="danger wide">Reset to my starting plan</button>
+        </section>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab active" data-nav="home"><span>⌂</span>Home</button>
+      <button class="tab" data-nav="calendar"><span>▦</span>Calendar</button>
+      <button class="tab" data-nav="money"><span>◉</span>Money</button>
+      <button class="tab" data-nav="business"><span>◐</span>Eclipse</button>
+      <button class="tab" data-nav="more"><span>•••</span>More</button>
+    </nav>
+  </div>
+
+  <dialog id="modal"><form method="dialog" id="modalForm"><div id="modalContent"></div></form></dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
