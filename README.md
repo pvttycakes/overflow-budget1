@@ -59,3 +59,10 @@ The renter's-insurance due date was not specified, so it is included with "date 
 - Variable categories are programmable per pay cycle.
 - Each variable category can be set to $0 or turned off when it is not currently needed.
 - Spending entered against a category reduces only that category's remaining need.
+
+
+## V2.3 payroll flexibility
+- Paycheck before allocations is editable.
+- 401(k), Roth IRA, HYSA, and an optional Other payroll deduction are editable independently.
+- The checking deposit is calculated automatically from those values.
+- Changes immediately update the paycheck plan and projections.

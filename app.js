@@ -8,7 +8,7 @@ const defaultData = {
   checkingUpdatedAt:null,
   paycheck:{grossTakeHomeBeforeAllocations:1680, checkingDeposit:1380, cadenceDays:14, nextDate:"2026-08-21"},
   monthlyIncome:{amount:600, day:1},
-  payrollAllocations:{roth:100,hysa:100,k401:100},
+  payrollAllocations:{roth:100,hysa:100,k401:100,other:0},
   minimumBuffer:250,
   bufferGoal:1000,
   bills:[
@@ -38,14 +38,16 @@ const defaultData = {
 let data = load();
 
 function migrateData(){
-  if(!data.paycheck.checkingDeposit){
+  if(!checkingDepositAmount()){
     data.paycheck.grossTakeHomeBeforeAllocations=data.paycheck.amount||1680;
-    data.paycheck.checkingDeposit=(data.paycheck.amount||1680)-300;
+    checkingDepositAmount()=(data.paycheck.amount||1680)-300;
     delete data.paycheck.amount;
   }
   if(!data.payrollAllocations){
-    data.payrollAllocations={roth:100,hysa:100,k401:100};
+    data.payrollAllocations={roth:100,hysa:100,k401:100,other:0};
     delete data.paydayTransfers;
+  } else if(data.payrollAllocations.other===undefined){
+    data.payrollAllocations.other=0;
   }
   if(data.essentials.length && data.essentials[0].amount!==undefined){
     data.essentials=data.essentials.map(x=>({
@@ -82,7 +84,7 @@ function paydayDates(from,to){
 function eventsBetween(from,to){
   const events=[];
   for(const d of paydayDates(from,to)){
-    events.push({date:d,type:"income",name:"Paycheck deposit",amount:data.paycheck.checkingDeposit});
+    events.push({date:d,type:"income",name:"Paycheck deposit",amount:checkingDepositAmount()});
   }
   let cursor=new Date(from.getFullYear(),from.getMonth(),1);
   while(cursor<=to){
@@ -143,11 +145,17 @@ function overflow(){
   return Math.max(0,cash-Number(data.minimumBuffer||0));
 }
 
+function checkingDepositAmount(){
+  const gross=Number(data.paycheck.grossTakeHomeBeforeAllocations||0);
+  const p=data.payrollAllocations||{};
+  return Math.max(0,gross-Number(p.k401||0)-Number(p.roth||0)-Number(p.hysa||0)-Number(p.other||0));
+}
+
 function nextMoneyIn(){
   const today=startOfDay(new Date());
   const candidates=[];
   const p=nextPayday();
-  if(p>=today)candidates.push({date:p,name:"Paycheck",amount:data.paycheck.checkingDeposit});
+  if(p>=today)candidates.push({date:p,name:"Paycheck",amount:checkingDepositAmount()});
   let monthDate=new Date(today.getFullYear(),today.getMonth(),data.monthlyIncome.day);
   if(monthDate<today)monthDate=new Date(today.getFullYear(),today.getMonth()+1,data.monthlyIncome.day);
   candidates.push({date:monthDate,name:"Monthly income",amount:data.monthlyIncome.amount});
@@ -168,7 +176,7 @@ function financeStatus(){
   return {label:"⭐ Strong",cls:"strong"};
 }
 function paydayPlanRows(){
-  const deposit=Number(data.paycheck.checkingDeposit||0);
+  const deposit=Number(checkingDepositAmount()||0);
   const currentChecking=Number(data.balances.checking||0);
   const p=nextPayday(), end=addDays(p,13);
 
@@ -290,6 +298,21 @@ function renderMoney(){
   document.querySelector("#accountCards").innerHTML=accounts.map(([n,v])=>`<div class="account-card"><span>${n}</span><strong>${money(v)}</strong></div>`).join("");
   document.querySelector("#ccBalance").textContent=money(data.balances.creditCard);
 }
+function renderPayrollSummary(){
+  const el=document.querySelector("#payrollSummary");
+  if(!el)return;
+  const p=data.payrollAllocations;
+  const rows=[
+    ["Paycheck before allocations",money(data.paycheck.grossTakeHomeBeforeAllocations)],
+    ["401(k) before checking","−"+money(p.k401)],
+    ["Roth IRA before checking","−"+money(p.roth)],
+    ["HYSA before checking","−"+money(p.hysa)],
+    ...(Number(p.other||0)>0?[["Other deductions","−"+money(p.other)]]:[]),
+    ["Deposit to checking",money(checkingDepositAmount())]
+  ];
+  el.innerHTML=rows.map(([a,b],i)=>`<div class="${i===rows.length-1?"total":""}"><span>${a}</span><strong>${b}</strong></div>`).join("");
+}
+
 function renderBusiness(){
   const b=data.business;
   const bp=Math.max(0,Number(b.cash||0)-Number(b.showReserve||0));
@@ -307,7 +330,7 @@ function renderMore(){
   document.querySelector("#incomeList").innerHTML=data.oneTimeIncome.length?data.oneTimeIncome.map(x=>`<div class="setting-row"><div><strong>${x.name}</strong><div class="meta">${money(x.amount)} • ${x.date}</div></div></div>`).join(""):`<div class="muted small">No one-time income entered yet.</div>`;
 }
 function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
-function renderAll(){renderHome();renderCalendar();renderMoney();renderBusiness();renderMore()}
+function renderAll(){renderHome();renderCalendar();renderMoney();renderPayrollSummary();renderBusiness();renderMore()}
 function showModal(html){document.querySelector("#modalContent").innerHTML=html;document.querySelector("#modal").showModal()}
 function modalActions(saveText="Save"){return `<div class="modal-actions"><button value="cancel" class="secondary">Cancel</button><button id="modalSave" value="default" class="primary">${saveText}</button></div>`}
 
@@ -359,6 +382,41 @@ document.querySelector("#editBalances").onclick=openBalanceEditor;
 document.querySelector("#quickCheckingBtn").onclick=openBalanceEditor;
 document.querySelector("#checkingHero").onclick=openBalanceEditor;
 document.querySelector("#payDebt").onclick=()=>{const p=Math.max(0,Number(document.querySelector("#debtPayment").value||0));data.balances.creditCard=Math.max(0,data.balances.creditCard-p);data.balances.checking=Math.max(0,data.balances.checking-p);save()};
+
+function openPayrollEditor(){
+  const p=data.payrollAllocations;
+  showModal(`<div class="modal-stack">
+    <h2>Edit payroll</h2>
+    <label>Paycheck before allocations
+      <input id="payGross" class="modal-input" type="text" inputmode="decimal" value="${data.paycheck.grossTakeHomeBeforeAllocations}">
+    </label>
+    <label>401(k) deduction
+      <input id="pay401" class="modal-input" type="text" inputmode="decimal" value="${p.k401}">
+    </label>
+    <label>Roth IRA deduction
+      <input id="payRoth" class="modal-input" type="text" inputmode="decimal" value="${p.roth}">
+    </label>
+    <label>HYSA deduction
+      <input id="payHysa" class="modal-input" type="text" inputmode="decimal" value="${p.hysa}">
+    </label>
+    <label>Other pre-checking deductions
+      <input id="payOther" class="modal-input" type="text" inputmode="decimal" value="${p.other||0}">
+    </label>
+    <p class="muted small">Overflow will calculate the amount that actually reaches checking after these deductions.</p>
+  </div>${modalActions()}`);
+  document.querySelector("#modalSave").onclick=()=>{
+    const clean=id=>Number(document.querySelector(id).value.replace(/[$,\\s]/g,"")||0);
+    data.paycheck.grossTakeHomeBeforeAllocations=clean("#payGross");
+    data.payrollAllocations.k401=clean("#pay401");
+    data.payrollAllocations.roth=clean("#payRoth");
+    data.payrollAllocations.hysa=clean("#payHysa");
+    data.payrollAllocations.other=clean("#payOther");
+    save();
+  };
+}
+
+document.querySelector("#editPayrollBtn").onclick=openPayrollEditor;
+
 document.querySelector("#editBusiness").onclick=()=>{
   showModal(`<div class="modal-stack"><h2>Eclipse balances</h2><label>Business cash<input id="b_cash" class="modal-input" inputmode="decimal" value="${data.business.cash}"></label><label>Inventory market value<input id="b_inventory" class="modal-input" inputmode="decimal" value="${data.business.inventory}"></label><label>Protected show reserve<input id="b_showReserve" class="modal-input" inputmode="decimal" value="${data.business.showReserve}"></label></div>${modalActions()}`);
   document.querySelector("#modalSave").onclick=()=>{["cash","inventory","showReserve"].forEach(k=>data.business[k]=Number(document.querySelector("#b_"+k).value||0));save()}
@@ -413,7 +471,7 @@ document.querySelector("#resetBtn").onclick=()=>{if(confirm("Reset all app data 
 document.querySelector("#settingsBtn").onclick=()=>document.querySelector('[data-nav="more"]').click();
 
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js?v=2.2",{updateViaCache:"none"}).then(reg=>{
+  navigator.serviceWorker.register("sw.js?v=2.3",{updateViaCache:"none"}).then(reg=>{
     reg.update();
   }).catch(()=>{});
 }

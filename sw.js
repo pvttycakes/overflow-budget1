@@ -1,5 +1,5 @@
-const CACHE="overflow-budget-v2-2";
-const ASSETS=["./","index.html","styles.css?v=2.2","app.js?v=2.2","manifest.json?v=2.2","icon-192.svg","icon-512.svg"];
+const CACHE="overflow-budget-v2-3";
+const ASSETS=["./","index.html","styles.css?v=2.3","app.js?v=2.3","manifest.json?v=2.3","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install", event => {
   self.skipWaiting();
