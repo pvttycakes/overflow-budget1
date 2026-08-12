@@ -337,7 +337,11 @@ document.querySelector("#exportBtn").onclick=()=>{
 document.querySelector("#resetBtn").onclick=()=>{if(confirm("Reset all app data to your starting budget plan?")){data=clone(defaultData);save()}};
 document.querySelector("#settingsBtn").onclick=()=>document.querySelector('[data-nav="more"]').click();
 
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js?v=2.1",{updateViaCache:"none"}).then(reg=>{
+    reg.update();
+  }).catch(()=>{});
+}
 renderAll();
 
 // iOS/PWA touch guard: reduce accidental double-tap zoom on app controls.
