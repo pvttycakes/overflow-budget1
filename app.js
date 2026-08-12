@@ -30,6 +30,7 @@ const defaultData = {
   ],
   weeklySpent:0,
   oneTimeIncome:[],
+  paidBills:{},
   plannedPurchases:[],
   business:{cash:0,inventory:0,showReserve:500,realizedProfit:0},
   settings:{notifications:false}
@@ -38,6 +39,7 @@ const defaultData = {
 let data = load();
 
 function migrateData(){
+  if(!data.paidBills) data.paidBills={};
   if(!checkingDepositAmount()){
     data.paycheck.grossTakeHomeBeforeAllocations=data.paycheck.amount||1680;
     checkingDepositAmount()=(data.paycheck.amount||1680)-300;
@@ -81,6 +83,27 @@ function paydayDates(from,to){
   while(d<=to){out.push(new Date(d));d=addDays(d,data.paycheck.cadenceDays)}
   return out;
 }
+
+function billOccurrenceKey(bill, date){
+  return `${bill.id}:${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}`;
+}
+function isBillPaid(bill, date){
+  return !!data.paidBills[billOccurrenceKey(bill,date)];
+}
+function setBillPaid(bill, date, paid=true){
+  const key=billOccurrenceKey(bill,date);
+  if(paid){
+    data.paidBills[key]={
+      paid:true,
+      paidAt:new Date().toISOString(),
+      amount:Number(bill.amount||0)
+    };
+  }else{
+    delete data.paidBills[key];
+  }
+  save();
+}
+
 function eventsBetween(from,to){
   const events=[];
   for(const d of paydayDates(from,to)){
@@ -94,7 +117,19 @@ function eventsBetween(from,to){
     for(const b of data.bills){
       if(!b.day)continue;
       const bd=new Date(y,m,Math.min(b.day,daysInMonth(y,m)));
-      if(bd>=from&&bd<=to)events.push({date:bd,type:"bill",name:b.name,amount:-b.amount,autopay:b.autopay});
+      if(bd>=from&&bd<=to){
+        const paid=isBillPaid(b,bd);
+        events.push({
+          date:bd,
+          type:"bill",
+          name:b.name,
+          amount:paid?0:-b.amount,
+          displayAmount:-b.amount,
+          autopay:b.autopay,
+          paid,
+          billId:b.id
+        });
+      }
     }
     cursor=new Date(y,m+1,1);
   }
@@ -201,8 +236,27 @@ function ageHours(ts){
 }
 
 function eventHTML(e){
-  return `<div class="event"><i class="mark ${e.type}"></i><div><strong>${e.name}</strong><span class="meta">${e.date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.autopay===false?" • manual":e.autopay===true?" • autopay":""}</span></div><div class="amount">${e.amount>=0?"+":""}${money(e.amount)}</div></div>`
+  const amt=e.displayAmount!==undefined?e.displayAmount:e.amount;
+  const paidClass=e.paid?" paid-event":"";
+  const paidLabel=e.paid?" • PAID":"";
+  const action=e.type==="bill"&&e.billId
+    ? `<button class="bill-check ${e.paid?"checked":""}" onclick="toggleBillPaid('${e.billId}','${iso(e.date)}')">${e.paid?"✓ Paid":"Mark paid"}</button>`
+    : "";
+  return `<div class="event${paidClass}">
+    <i class="mark ${e.paid?"income":e.type}"></i>
+    <div><strong>${e.name}</strong><span class="meta">${e.date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.autopay===false?" • manual":e.autopay===true?" • autopay":""}${paidLabel}</span>${action}</div>
+    <div class="amount ${e.paid?"paid-amount":""}">${e.paid?"Paid":`${amt>=0?"+":""}${money(amt)}`}</div>
+  </div>`;
 }
+
+
+window.toggleBillPaid=(billId,dateStr)=>{
+  const bill=data.bills.find(b=>b.id===billId);
+  if(!bill)return;
+  const d=parseDate(dateStr);
+  const current=isBillPaid(bill,d);
+  setBillPaid(bill,d,!current);
+};
 
 function renderHome(){
   const safe=safeToSpend(), current=Number(data.balances.checking||0);
@@ -321,6 +375,37 @@ function renderBusiness(){
     ["Business cash",b.cash],["Inventory value",b.inventory],["Show reserve",b.showReserve],["Realized profit",b.realizedProfit]
   ].map(([n,v])=>`<div class="account-card"><span>${n}</span><strong>${money(v)}</strong></div>`).join("");
 }
+
+function renderBillChecklist(){
+  const el=document.querySelector("#billChecklist");
+  if(!el)return;
+  const today=startOfDay(new Date());
+  const end=addDays(today,45);
+  const items=[];
+  let cursor=new Date(today.getFullYear(),today.getMonth(),1);
+  while(cursor<=end){
+    const y=cursor.getFullYear(),m=cursor.getMonth();
+    for(const b of data.bills){
+      if(!b.day)continue;
+      const d=new Date(y,m,Math.min(b.day,daysInMonth(y,m)));
+      if(d>=today && d<=end){
+        items.push({bill:b,date:d,paid:isBillPaid(b,d)});
+      }
+    }
+    cursor=new Date(y,m+1,1);
+  }
+  items.sort((a,b)=>a.date-b.date);
+  el.innerHTML=items.length?items.map(x=>`
+    <div class="checklist-row ${x.paid?"paid":""}">
+      <button class="check-circle ${x.paid?"checked":""}" onclick="toggleBillPaid('${x.bill.id}','${iso(x.date)}')">${x.paid?"✓":""}</button>
+      <div class="check-main">
+        <strong>${x.bill.name}</strong>
+        <span>${x.date.toLocaleDateString("en-US",{month:"short",day:"numeric"})} • ${money(x.bill.amount)} • ${x.bill.autopay?"autopay":"manual"}</span>
+      </div>
+      <div class="check-status">${x.paid?"Paid":"Due"}</div>
+    </div>`).join(""):`<div class="muted small">No bills due in the next 45 days.</div>`;
+}
+
 function renderMore(){
   document.querySelector("#billList").innerHTML=data.bills.map((b,i)=>`<div class="setting-row"><div><strong>${b.name}</strong><div class="meta">${money(b.amount)} • ${b.day?ordinal(b.day):"date needed"} • ${b.autopay?"autopay":"manual"}</div></div><button onclick="editBill(${i})">Edit</button></div>`).join("");
   document.querySelector("#essentialList").innerHTML=data.essentials.map((x,i)=>{
@@ -330,7 +415,7 @@ function renderMore(){
   document.querySelector("#incomeList").innerHTML=data.oneTimeIncome.length?data.oneTimeIncome.map(x=>`<div class="setting-row"><div><strong>${x.name}</strong><div class="meta">${money(x.amount)} • ${x.date}</div></div></div>`).join(""):`<div class="muted small">No one-time income entered yet.</div>`;
 }
 function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
-function renderAll(){renderHome();renderCalendar();renderMoney();renderPayrollSummary();renderBusiness();renderMore()}
+function renderAll(){renderHome();renderCalendar();renderMoney();renderPayrollSummary();renderBillChecklist();renderBusiness();renderMore()}
 function showModal(html){document.querySelector("#modalContent").innerHTML=html;document.querySelector("#modal").showModal()}
 function modalActions(saveText="Save"){return `<div class="modal-actions"><button value="cancel" class="secondary">Cancel</button><button id="modalSave" value="default" class="primary">${saveText}</button></div>`}
 
@@ -471,7 +556,7 @@ document.querySelector("#resetBtn").onclick=()=>{if(confirm("Reset all app data 
 document.querySelector("#settingsBtn").onclick=()=>document.querySelector('[data-nav="more"]').click();
 
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js?v=2.3",{updateViaCache:"none"}).then(reg=>{
+  navigator.serviceWorker.register("sw.js?v=2.4",{updateViaCache:"none"}).then(reg=>{
     reg.update();
   }).catch(()=>{});
 }

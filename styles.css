@@ -42,3 +42,18 @@ button,.tab,.day,.icon-btn,.text-btn,.primary,.secondary,.danger{-webkit-tap-hig
 .safe-card{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
 .recovery-panel{margin-top:16px;padding:14px;border-radius:16px;background:#231517;border:1px solid #5b282c;color:#f1c1c4;line-height:1.45}
 .recovery-panel strong{color:#fff}.hidden{display:none}.stale{color:#ffcb87!important}
+
+.bill-checklist{margin-top:10px}
+.checklist-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.checklist-row:last-child{border-bottom:0}
+.check-circle{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#0f1114;color:#fff;font-weight:900}
+.check-circle.checked{background:var(--income);border-color:var(--income);color:#0d1a13}
+.check-main strong,.check-main span{display:block}
+.check-main span{font-size:12px;color:var(--muted);margin-top:3px}
+.check-status{font-size:12px;font-weight:800;color:var(--muted)}
+.checklist-row.paid .check-main strong,.checklist-row.paid .check-status{color:var(--income)}
+.checklist-row.paid .check-main span{color:#79b895}
+.bill-check{margin-top:6px;border:0;border-radius:999px;padding:5px 8px;background:var(--card2);color:var(--muted);font-size:11px}
+.bill-check.checked{background:#163522;color:#9ce0b8}
+.paid-event{opacity:.9}
+.paid-event strong,.paid-amount{color:var(--income)!important}

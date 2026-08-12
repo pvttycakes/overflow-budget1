@@ -66,3 +66,11 @@ The renter's-insurance due date was not specified, so it is included with "date 
 - 401(k), Roth IRA, HYSA, and an optional Other payroll deduction are editable independently.
 - The checking deposit is calculated automatically from those values.
 - Changes immediately update the paycheck plan and projections.
+
+
+## V2.4 bill checklist
+- Upcoming bills now have a checklist on Home.
+- Marking a bill paid turns it green.
+- Paid bills remain visible for confirmation but contribute $0 to future required allocations.
+- Paid status is tracked by bill and month, so marking August phone paid does not mark September phone paid.
+- Bills can also be marked/unmarked directly from upcoming-event cards.
