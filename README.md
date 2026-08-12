@@ -1,4 +1,4 @@
-# Overflow Budget
+# Overflow Budget V2
 
 A private, local-first Progressive Web App tailored for payday-first budgeting.
 
@@ -39,3 +39,14 @@ Version 1 stores your balances and budget data in the browser's localStorage on 
 
 ## Items to confirm
 The renter's-insurance due date was not specified, so it is included with "date needed". Edit it in More > Recurring bills.
+
+
+## V2 corrections
+- Current checking is editable directly from Home.
+- Checking supports negative balances such as `-99`.
+- Safe to Spend Today never uses future income.
+- Recovery Mode activates below the protected checking floor.
+- Next money in and after-payday projection are shown separately.
+- Balance freshness warnings appear after 72 hours.
+- Payday allocation follows recovery priorities before savings.
+- iPhone touch behavior is hardened against accidental double-tap zoom.

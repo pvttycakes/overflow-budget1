@@ -29,3 +29,16 @@ h1{margin:2px 0 0;font-size:30px;letter-spacing:-.04em}h2{margin:0;font-size:20p
 .tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(720px,100%);display:grid;grid-template-columns:repeat(5,1fr);background:rgba(13,15,17,.94);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:10}.tab{background:none;border:0;color:#858d97;font-size:10px;padding:5px}.tab span{display:block;font-size:20px;margin-bottom:2px}.tab.active{color:var(--accent)}
 dialog{width:min(520px,calc(100% - 28px));border:1px solid var(--line);border-radius:24px;background:var(--card);color:var(--text);padding:20px}dialog::backdrop{background:rgba(0,0,0,.68)}.modal-actions{display:flex;gap:10px;margin-top:18px}.modal-actions button{flex:1}.modal-stack{display:grid;gap:10px}.modal-stack label{font-size:12px;color:var(--muted)}
 @media (max-width:390px){.hero-number{font-size:46px}.day{min-height:58px;padding:5px}.account-grid{grid-template-columns:1fr 1fr}}
+
+html,body,.app-shell,button,.tab,.day,.card,.hero-card{touch-action:manipulation}
+button,.tab,.day,.icon-btn,.text-btn,.primary,.secondary,.danger{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;user-select:none}
+.status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.status-chip{font-size:11px;font-weight:850;border-radius:999px;padding:7px 10px;border:1px solid var(--line)}
+.status-chip.recovery{background:#2a1517;color:#ff9d9d;border-color:#5a272b}
+.status-chip.stable{background:#2d2615;color:#ffd986;border-color:#5c4c21}
+.status-chip.healthy{background:#153023;color:#9ce0b8;border-color:#285d46}
+.status-chip.strong{background:#2d2716;color:var(--accent);border-color:#665527}
+.checking-hero{display:block;background:none;border:0;color:var(--text);padding:0;margin-top:4px;font-size:46px;font-weight:850;letter-spacing:-.055em;text-align:left}
+.safe-card{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.recovery-panel{margin-top:16px;padding:14px;border-radius:16px;background:#231517;border:1px solid #5b282c;color:#f1c1c4;line-height:1.45}
+.recovery-panel strong{color:#fff}.hidden{display:none}.stale{color:#ffcb87!important}

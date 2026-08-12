@@ -5,6 +5,7 @@ const DAY = 86400000;
 const defaultData = {
   version:1,
   balances:{checking:0,savings:0,hysa:0,k401:0,roth:0,creditCard:800},
+  checkingUpdatedAt:null,
   paycheck:{amount:1680, cadenceDays:14, nextDate:"2026-08-21"},
   monthlyIncome:{amount:600, day:1},
   paydayTransfers:{roth:100,hysa:100,k401:100},
@@ -99,39 +100,133 @@ function projected(date){
   return Number(data.balances.checking||0)+eventsBetween(startOfDay(new Date()),date).reduce((s,e)=>s+e.amount,0);
 }
 function safeToSpend(){
-  const payday=nextPayday();
   const cash=Number(data.balances.checking||0);
-  const netScheduled=eventsBetween(startOfDay(new Date()),payday).reduce((s,e)=>s+e.amount,0);
+  if(cash<=0) return 0;
+  const protectedFloor=Number(data.minimumBuffer||0);
+  const availableAboveFloor=Math.max(0,cash-protectedFloor);
   const weeklyReserve=Math.max(0,weeklyAllowance()-Number(data.weeklySpent||0));
-  return Math.max(0,cash+netScheduled-data.minimumBuffer-weeklyReserve);
+  return Math.max(0,Math.min(cash,availableAboveFloor-weeklyReserve));
 }
 function overflow(){
-  const thirty=addDays(startOfDay(new Date()),30);
-  return Math.max(0,projected(thirty)-data.minimumBuffer-essentialMonthlyTotal());
+  const cash=Number(data.balances.checking||0);
+  return Math.max(0,cash-Number(data.minimumBuffer||0));
 }
+
+function nextMoneyIn(){
+  const today=startOfDay(new Date());
+  const candidates=[];
+  const p=nextPayday();
+  if(p>=today)candidates.push({date:p,name:"Paycheck",amount:data.paycheck.amount});
+  let monthDate=new Date(today.getFullYear(),today.getMonth(),data.monthlyIncome.day);
+  if(monthDate<today)monthDate=new Date(today.getFullYear(),today.getMonth()+1,data.monthlyIncome.day);
+  candidates.push({date:monthDate,name:"Monthly income",amount:data.monthlyIncome.amount});
+  data.oneTimeIncome.forEach(x=>{const d=parseDate(x.date);if(d>=today)candidates.push({date:d,name:x.name,amount:x.amount})});
+  candidates.sort((a,b)=>a.date-b.date);
+  return candidates[0];
+}
+function projectedAfterNextPayday(){
+  const p=nextPayday();
+  const end=addDays(p,13);
+  return Number(data.balances.checking||0)+eventsBetween(startOfDay(new Date()),end).reduce((s,e)=>s+e.amount,0)-weeklyAllowance()*2;
+}
+function financeStatus(){
+  const c=Number(data.balances.checking||0);
+  if(c<Number(data.minimumBuffer||0))return {label:"🔴 Recovery",cls:"recovery"};
+  if(c<500)return {label:"🟡 Stable",cls:"stable"};
+  if(c<1000)return {label:"🟢 Healthy",cls:"healthy"};
+  return {label:"⭐ Strong",cls:"strong"};
+}
+function paydayPlanRows(){
+  const paycheck=Number(data.paycheck.amount||0);
+  const checking=Number(data.balances.checking||0);
+  const shortfall=Math.max(0,-checking);
+  const p=nextPayday(), end=addDays(p,13);
+  const bills=eventsBetween(p,end).filter(e=>e.type==="bill").reduce((s,e)=>s-e.amount,0);
+  const essentials=weeklyAllowance()*2;
+  const bufferNeed=Math.max(0,Number(data.minimumBuffer||0)-Math.max(0,checking));
+  let remaining=paycheck-shortfall-bills-essentials-bufferNeed;
+  const roth=remaining>=data.paydayTransfers.roth?data.paydayTransfers.roth:0;
+  remaining-=roth;
+  const hysa=remaining>=data.paydayTransfers.hysa?data.paydayTransfers.hysa:0;
+  remaining-=hysa;
+  return {paycheck,shortfall,bills,essentials,bufferNeed,roth,hysa,remaining:Math.max(0,remaining)};
+}
+function ageHours(ts){
+  if(!ts)return Infinity;
+  return (Date.now()-new Date(ts).getTime())/3600000;
+}
+
 function eventHTML(e){
   return `<div class="event"><i class="mark ${e.type}"></i><div><strong>${e.name}</strong><span class="meta">${e.date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${e.autopay===false?" • manual":e.autopay===true?" • autopay":""}</span></div><div class="amount">${e.amount>=0?"+":""}${money(e.amount)}</div></div>`
 }
 
 function renderHome(){
-  const np=nextPayday(), safe=safeToSpend();
+  const safe=safeToSpend(), current=Number(data.balances.checking||0);
+  const status=financeStatus();
+  const statusEl=document.querySelector("#financeStatus");
+  statusEl.textContent=status.label;
+  statusEl.className=`status-chip ${status.cls}`;
+
+  document.querySelector("#checkingHero").textContent=money(current);
+  const fresh=document.querySelector("#balanceFreshness");
+  if(!data.checkingUpdatedAt){
+    fresh.textContent="Tap to enter your current bank balance";
+    fresh.className="hero-sub stale";
+  }else{
+    const hrs=ageHours(data.checkingUpdatedAt);
+    if(hrs>72){
+      fresh.textContent=`⚠ Balance last updated ${Math.floor(hrs/24)} days ago`;
+      fresh.className="hero-sub stale";
+    }else{
+      fresh.textContent=`Updated ${new Date(data.checkingUpdatedAt).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}`;
+      fresh.className="hero-sub";
+    }
+  }
+
   document.querySelector("#safeToSpend").textContent=money(safe);
-  document.querySelector("#safeSub").textContent=`until ${np.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}`;
-  document.querySelector("#checkingNow").textContent=money(data.balances.checking);
+  document.querySelector("#safeSub").textContent=current<=0?"No current cash available to spend":"based on cash actually available today";
+
+  const nm=nextMoneyIn();
+  document.querySelector("#nextPayday").textContent=nm?`${money(nm.amount)} • ${nm.date.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`:"None scheduled";
+  document.querySelector("#afterPayday").textContent=money(projectedAfterNextPayday());
   document.querySelector("#overflowNow").textContent=money(overflow());
-  document.querySelector("#nextPayday").textContent=`${money(data.paycheck.amount)} • ${np.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`;
   document.querySelector("#projectedBalance").textContent=money(projected(addDays(startOfDay(new Date()),30)));
+
+  const recovery=document.querySelector("#recoveryPanel");
+  if(current < Number(data.minimumBuffer||0)){
+    const gap=Number(data.minimumBuffer||0)-current;
+    recovery.classList.remove("hidden");
+    recovery.innerHTML=`<strong>Recovery Mode</strong><br>${current<0?`Cash shortfall: <strong>${money(Math.abs(current))}</strong><br>`:""}You are <strong>${money(gap)}</strong> below your ${money(data.minimumBuffer)} protected checking floor. Future income improves your forecast, but does not increase what is safe to spend today.`;
+  }else{
+    recovery.classList.add("hidden");
+  }
+
+  const plan=paydayPlanRows();
+  const rows=[
+    ["Paycheck",money(plan.paycheck)],
+    ...(plan.shortfall?[["Clear shortfall","−"+money(plan.shortfall)]]:[]),
+    ["Bills until following payday","−"+money(plan.bills)],
+    ["Two weeks necessities","−"+money(plan.essentials)],
+    ...(plan.bufferNeed?[["Restore checking floor","−"+money(plan.bufferNeed)]]:[]),
+    ["Roth IRA recommendation","−"+money(plan.roth)],
+    ["HYSA recommendation","−"+money(plan.hysa)],
+    ["Potential overflow",money(plan.remaining)]
+  ];
+  document.querySelector("#paydayPlan").innerHTML=rows.map(([a,b],i)=>`<div class="${i===rows.length-1?"total":""}"><span>${a}</span><strong>${b}</strong></div>`).join("");
+
   const upcoming=eventsBetween(startOfDay(new Date()),addDays(startOfDay(new Date()),35)).slice(0,8);
   document.querySelector("#upcomingList").innerHTML=upcoming.length?upcoming.map(eventHTML).join(""):`<div class="muted small">No scheduled items.</div>`;
+
   const wa=weeklyAllowance(), spent=Number(data.weeklySpent||0), rem=Math.max(0,wa-spent);
   document.querySelector("#weeklyRemaining").textContent=`${money(rem)} left`;
   document.querySelector("#weeklyDetail").textContent=`${money(spent)} of ${money(wa)} used`;
   document.querySelector("#weeklyBar").style.width=`${Math.min(100,spent/wa*100)}%`;
-  const current=Number(data.minimumBuffer||0), goal=Number(data.bufferGoal||1000);
-  document.querySelector("#bufferCurrent").textContent=money(current);
-  document.querySelector("#bufferBar").style.width=`${Math.min(100,current/goal*100)}%`;
+
+  const floor=Number(data.minimumBuffer||0), goal=Number(data.bufferGoal||1000);
+  document.querySelector("#bufferCurrent").textContent=money(floor);
+  document.querySelector("#bufferBar").style.width=`${Math.min(100,floor/goal*100)}%`;
   const months=Math.max(1,Math.ceil((new Date(2027,0,1)-new Date())/(30.44*DAY)));
-  const perMonth=Math.max(0,(goal-current)/months);
+  const perMonth=Math.max(0,(goal-floor)/months);
   document.querySelector("#bufferAdvice").textContent=`To reach ${money(goal)} by the new year, build your protected checking floor by about ${money(perMonth)} per month.`;
 }
 function renderCalendar(){
@@ -183,17 +278,37 @@ document.querySelectorAll("[data-nav]").forEach(b=>b.addEventListener("click",()
 document.querySelector("#affordBtn").onclick=()=>{
   const amt=Number(document.querySelector("#purchaseAmount").value||0),safe=safeToSpend(), el=document.querySelector("#affordResult");
   if(!amt){el.className="decision muted";el.textContent="Enter a purchase amount first.";return}
-  if(amt<=safe){el.className="decision good";el.innerHTML=`✓ Yes. This fits inside your safe-to-spend amount and leaves about <strong>${money(safe-amt)}</strong> of safe spending until payday.`}
-  else{el.className="decision warn";el.innerHTML=`⚠ Wait. This is <strong>${money(amt-safe)}</strong> above your current safe-to-spend amount. Your ${money(data.minimumBuffer)} protected checking floor stays intact if you wait.`}
+  if(ageHours(data.checkingUpdatedAt)>72){
+    el.className="decision warn";
+    el.innerHTML="⚠ Update your checking balance first. I do not want to give you a spending recommendation from stale account data.";
+    return;
+  }
+  if(amt<=safe){
+    el.className="decision good";
+    el.innerHTML=`✓ Yes. This fits inside today's safe-to-spend amount and leaves about <strong>${money(safe-amt)}</strong> available today.`;
+  }else{
+    el.className="decision warn";
+    el.innerHTML=`⚠ Not today. This is <strong>${money(amt-safe)}</strong> above what is currently safe to spend. Future income is intentionally excluded from today's answer.`;
+  }
 };
 document.querySelector("#addWeeklySpend").onclick=()=>{
   showModal(`<div class="modal-stack"><h2>Add weekly spending</h2><label>Amount<input id="mSpend" class="modal-input" inputmode="decimal"></label><label>Note<input id="mNote" class="modal-input" placeholder="Groceries, gas, dinner..."></label></div>${modalActions("Add")}`);
   document.querySelector("#modalSave").onclick=()=>{data.weeklySpent+=Number(document.querySelector("#mSpend").value||0);save()}
 };
-document.querySelector("#editBalances").onclick=()=>{
-  showModal(`<div class="modal-stack"><h2>Update balances</h2>${Object.entries({checking:"Checking",savings:"Savings",hysa:"HYSA",k401:"401(k)",roth:"Roth IRA",creditCard:"Credit card balance"}).map(([k,l])=>`<label>${l}<input id="bal_${k}" class="modal-input" inputmode="decimal" value="${data.balances[k]}"></label>`).join("")}</div>${modalActions()}`);
-  document.querySelector("#modalSave").onclick=()=>{Object.keys(data.balances).forEach(k=>data.balances[k]=Number(document.querySelector("#bal_"+k).value||0));save()}
-};
+function openBalanceEditor(){
+  showModal(`<div class="modal-stack"><h2>Update balances</h2>${Object.entries({checking:"Checking",savings:"Savings",hysa:"HYSA",k401:"401(k)",roth:"Roth IRA",creditCard:"Credit card balance"}).map(([k,l])=>`<label>${l}<input id="bal_${k}" class="modal-input" type="text" inputmode="${k==="checking"?"text":"decimal"}" value="${data.balances[k]}"></label>`).join("")}<p class="muted small">Checking accepts negative numbers such as -99.</p></div>${modalActions()}`);
+  document.querySelector("#modalSave").onclick=()=>{
+    Object.keys(data.balances).forEach(k=>{
+      const raw=document.querySelector("#bal_"+k).value.replace(/[$,\s]/g,"");
+      data.balances[k]=Number(raw||0);
+    });
+    data.checkingUpdatedAt=new Date().toISOString();
+    save();
+  };
+}
+document.querySelector("#editBalances").onclick=openBalanceEditor;
+document.querySelector("#quickCheckingBtn").onclick=openBalanceEditor;
+document.querySelector("#checkingHero").onclick=openBalanceEditor;
 document.querySelector("#payDebt").onclick=()=>{const p=Math.max(0,Number(document.querySelector("#debtPayment").value||0));data.balances.creditCard=Math.max(0,data.balances.creditCard-p);data.balances.checking=Math.max(0,data.balances.checking-p);save()};
 document.querySelector("#editBusiness").onclick=()=>{
   showModal(`<div class="modal-stack"><h2>Eclipse balances</h2><label>Business cash<input id="b_cash" class="modal-input" inputmode="decimal" value="${data.business.cash}"></label><label>Inventory market value<input id="b_inventory" class="modal-input" inputmode="decimal" value="${data.business.inventory}"></label><label>Protected show reserve<input id="b_showReserve" class="modal-input" inputmode="decimal" value="${data.business.showReserve}"></label></div>${modalActions()}`);
@@ -224,3 +339,11 @@ document.querySelector("#settingsBtn").onclick=()=>document.querySelector('[data
 
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");
 renderAll();
+
+// iOS/PWA touch guard: reduce accidental double-tap zoom on app controls.
+let lastTouchEnd=0;
+document.addEventListener("touchend",function(e){
+  const now=Date.now();
+  if(now-lastTouchEnd<=300 && e.target.closest("button,.tab,.day,.hero-card,.card")) e.preventDefault();
+  lastTouchEnd=now;
+},{passive:false});

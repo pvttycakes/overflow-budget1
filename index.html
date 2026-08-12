@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <meta name="theme-color" content="#111315" />
   <title>Overflow Budget</title>
   <link rel="manifest" href="manifest.json" />
@@ -22,14 +22,27 @@
     <main>
       <section id="home" class="view active">
         <div class="hero-card">
-          <div class="hero-label">SAFE TO SPEND</div>
-          <div id="safeToSpend" class="hero-number">$0</div>
-          <div id="safeSub" class="hero-sub">until next payday</div>
+          <div class="status-row">
+            <span id="financeStatus" class="status-chip recovery">🔴 Recovery</span>
+            <button id="quickCheckingBtn" class="text-btn">Update checking</button>
+          </div>
+          <div class="hero-label">CURRENT CHECKING</div>
+          <button id="checkingHero" class="checking-hero">$0</button>
+          <div id="balanceFreshness" class="hero-sub">Tap to update balance</div>
+
+          <div class="safe-card">
+            <div class="hero-label">SAFE TO SPEND TODAY</div>
+            <div id="safeToSpend" class="hero-number">$0</div>
+            <div id="safeSub" class="hero-sub">based on cash you actually have now</div>
+          </div>
+
+          <div id="recoveryPanel" class="recovery-panel hidden"></div>
+
           <div class="mini-grid">
-            <div><span>Checking</span><strong id="checkingNow">$0</strong></div>
-            <div><span>Overflow</span><strong id="overflowNow">$0</strong></div>
-            <div><span>Next payday</span><strong id="nextPayday">$0</strong></div>
-            <div><span>Projected</span><strong id="projectedBalance">$0</strong></div>
+            <div><span>Next money in</span><strong id="nextPayday">$0</strong></div>
+            <div><span>After payday</span><strong id="afterPayday">$0</strong></div>
+            <div><span>Overflow now</span><strong id="overflowNow">$0</strong></div>
+            <div><span>30-day projected</span><strong id="projectedBalance">$0</strong></div>
           </div>
         </div>
 
@@ -43,6 +56,11 @@
             <button id="affordBtn" class="primary">Check</button>
           </div>
           <div id="affordResult" class="decision muted">Enter a purchase to see whether it fits safely before your next payday.</div>
+        </section>
+
+        <section class="card">
+          <div class="section-head"><h2>Next paycheck plan</h2><span class="pill">Autopilot</span></div>
+          <div id="paydayPlan" class="split-list"></div>
         </section>
 
         <section class="card">
