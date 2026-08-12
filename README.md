@@ -50,3 +50,12 @@ The renter's-insurance due date was not specified, so it is included with "date 
 - Balance freshness warnings appear after 72 hours.
 - Payday allocation follows recovery priorities before savings.
 - iPhone touch behavior is hardened against accidental double-tap zoom.
+
+
+## V2.2 paycheck model
+- $1,680 is treated as the employer-side paycheck amount before the three fixed $100 allocations.
+- $100 401(k), $100 Roth IRA, and $100 HYSA are non-negotiable and occur before checking.
+- Only $1,380 is treated as the checking deposit.
+- Variable categories are programmable per pay cycle.
+- Each variable category can be set to $0 or turned off when it is not currently needed.
+- Spending entered against a category reduces only that category's remaining need.

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   <meta name="theme-color" content="#111315" />
   <title>Overflow Budget</title>
-  <link rel="manifest" href="manifest.json?v=2.1" />
+  <link rel="manifest" href="manifest.json?v=2.2" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
-  <link rel="stylesheet" href="styles.css?v=2.1" />
+  <link rel="stylesheet" href="styles.css?v=2.2" />
 </head>
 <body>
   <div class="app-shell">
@@ -116,14 +116,15 @@
           <div class="purchase-row"><div class="input-money"><span>$</span><input id="debtPayment" inputmode="decimal" placeholder="Payment" /></div><button id="payDebt" class="primary">Pay</button></div>
         </section>
         <section class="card">
-          <div class="section-head"><h2>Payday autopilot</h2><span class="pill">Every 2 weeks</span></div>
+          <div class="section-head"><h2>Payroll allocation</h2><span class="pill">Non-negotiable</span></div>
           <div class="split-list">
-            <div><span>Paycheck</span><strong>$1,680</strong></div>
-            <div><span>Roth IRA transfer</span><strong>−$100</strong></div>
-            <div><span>HYSA transfer</span><strong>−$100</strong></div>
-            <div><span>401(k) contribution</span><strong>+$100 invested</strong></div>
-            <div class="total"><span>Checking retained</span><strong>$1,480</strong></div>
+            <div><span>Employer paycheck amount</span><strong>$1,680</strong></div>
+            <div><span>401(k) before checking</span><strong>−$100</strong></div>
+            <div><span>Roth IRA before checking</span><strong>−$100</strong></div>
+            <div><span>HYSA before checking</span><strong>−$100</strong></div>
+            <div class="total"><span>Deposit to checking</span><strong>$1,380</strong></div>
           </div>
+          <p class="muted small">These three $100 contributions never touch checking and are always treated as completed before your checking deposit arrives.</p>
         </section>
       </section>
 
@@ -184,6 +185,6 @@
 
   <dialog id="modal"><form method="dialog" id="modalForm"><div id="modalContent"></div></form></dialog>
 
-  <script src="app.js?v=2.1"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

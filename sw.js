@@ -1,11 +1,10 @@
-const CACHE="overflow-budget-v2-1";
-const ASSETS=["./","index.html","styles.css","app.js","manifest.json","icon-192.svg","icon-512.svg"];
+const CACHE="overflow-budget-v2-2";
+const ASSETS=["./","index.html","styles.css?v=2.2","app.js?v=2.2","manifest.json?v=2.2","icon-192.svg","icon-512.svg"];
 
 self.addEventListener("install", event => {
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
 });
-
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -13,25 +12,18 @@ self.addEventListener("activate", event => {
     ).then(() => self.clients.claim())
   );
 });
-
 self.addEventListener("fetch", event => {
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).then(response => {
-        const copy=response.clone();
-        caches.open(CACHE).then(cache => cache.put("index.html", copy));
-        return response;
-      }).catch(() => caches.match("index.html"))
-    );
+  if(event.request.mode==="navigate"){
+    event.respondWith(fetch(event.request).catch(()=>caches.match("index.html")));
     return;
   }
   event.respondWith(
-    fetch(event.request).then(response => {
+    fetch(event.request).then(response=>{
       if(event.request.method==="GET"){
         const copy=response.clone();
-        caches.open(CACHE).then(cache => cache.put(event.request, copy));
+        caches.open(CACHE).then(cache=>cache.put(event.request,copy));
       }
       return response;
-    }).catch(() => caches.match(event.request))
+    }).catch(()=>caches.match(event.request))
   );
 });

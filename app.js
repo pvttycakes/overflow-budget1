@@ -6,9 +6,9 @@ const defaultData = {
   version:1,
   balances:{checking:0,savings:0,hysa:0,k401:0,roth:0,creditCard:800},
   checkingUpdatedAt:null,
-  paycheck:{amount:1680, cadenceDays:14, nextDate:"2026-08-21"},
+  paycheck:{grossTakeHomeBeforeAllocations:1680, checkingDeposit:1380, cadenceDays:14, nextDate:"2026-08-21"},
   monthlyIncome:{amount:600, day:1},
-  paydayTransfers:{roth:100,hysa:100,k401:100},
+  payrollAllocations:{roth:100,hysa:100,k401:100},
   minimumBuffer:250,
   bufferGoal:1000,
   bills:[
@@ -22,11 +22,11 @@ const defaultData = {
     {id:"internet",name:"Internet",amount:80,day:16,autopay:true}
   ],
   essentials:[
-    {id:"groceries",name:"Groceries",amount:500},
-    {id:"gas",name:"Gas",amount:100},
-    {id:"eating",name:"Eating out",amount:175},
-    {id:"household",name:"Household supplies",amount:250},
-    {id:"pet",name:"Pet",amount:150}
+    {id:"groceries",name:"Groceries",monthlyTarget:500,cycleNeed:250,spentThisCycle:0,active:true},
+    {id:"gas",name:"Gas",monthlyTarget:100,cycleNeed:50,spentThisCycle:0,active:true},
+    {id:"eating",name:"Eating out",monthlyTarget:175,cycleNeed:0,spentThisCycle:0,active:false},
+    {id:"household",name:"Household supplies",monthlyTarget:250,cycleNeed:0,spentThisCycle:0,active:false},
+    {id:"pet",name:"Pet",monthlyTarget:150,cycleNeed:75,spentThisCycle:0,active:true}
   ],
   weeklySpent:0,
   oneTimeIncome:[],
@@ -36,6 +36,28 @@ const defaultData = {
 };
 
 let data = load();
+
+function migrateData(){
+  if(!data.paycheck.checkingDeposit){
+    data.paycheck.grossTakeHomeBeforeAllocations=data.paycheck.amount||1680;
+    data.paycheck.checkingDeposit=(data.paycheck.amount||1680)-300;
+    delete data.paycheck.amount;
+  }
+  if(!data.payrollAllocations){
+    data.payrollAllocations={roth:100,hysa:100,k401:100};
+    delete data.paydayTransfers;
+  }
+  if(data.essentials.length && data.essentials[0].amount!==undefined){
+    data.essentials=data.essentials.map(x=>({
+      id:x.id,name:x.name,monthlyTarget:Number(x.amount||0),
+      cycleNeed: x.id==="groceries"?250 : x.id==="gas"?50 : x.id==="pet"?75 : 0,
+      spentThisCycle:0,
+      active:["groceries","gas","pet"].includes(x.id)
+    }));
+  }
+}
+
+migrateData();
 let calendarCursor = new Date(2026,7,1);
 let selectedDate = new Date();
 
@@ -60,9 +82,7 @@ function paydayDates(from,to){
 function eventsBetween(from,to){
   const events=[];
   for(const d of paydayDates(from,to)){
-    events.push({date:d,type:"income",name:"Paycheck",amount:data.paycheck.amount});
-    if(data.paydayTransfers.roth) events.push({date:d,type:"saving",name:"Roth IRA",amount:-data.paydayTransfers.roth});
-    if(data.paydayTransfers.hysa) events.push({date:d,type:"saving",name:"HYSA",amount:-data.paydayTransfers.hysa});
+    events.push({date:d,type:"income",name:"Paycheck deposit",amount:data.paycheck.checkingDeposit});
   }
   let cursor=new Date(from.getFullYear(),from.getMonth(),1);
   while(cursor<=to){
@@ -86,8 +106,19 @@ function nextPayday(){
   while(d<today)d=addDays(d,data.paycheck.cadenceDays);
   return d;
 }
-function essentialMonthlyTotal(){return data.essentials.reduce((s,x)=>s+Number(x.amount||0),0)}
-function weeklyAllowance(){return essentialMonthlyTotal()*12/52}
+function essentialMonthlyTotal(){
+  return data.essentials.reduce((s,x)=>s+Number(x.monthlyTarget||0),0);
+}
+function activeCycleNeed(){
+  return data.essentials.reduce((s,x)=>{
+    if(!x.active) return s;
+    const remaining=Math.max(0,Number(x.cycleNeed||0)-Number(x.spentThisCycle||0));
+    return s+remaining;
+  },0);
+}
+function weeklyAllowance(){
+  return activeCycleNeed()/2;
+}
 function obligationsUntil(date){
   const today=startOfDay(new Date());
   return eventsBetween(today,date).filter(e=>e.amount<0).reduce((s,e)=>s-e.amount,0);
@@ -116,7 +147,7 @@ function nextMoneyIn(){
   const today=startOfDay(new Date());
   const candidates=[];
   const p=nextPayday();
-  if(p>=today)candidates.push({date:p,name:"Paycheck",amount:data.paycheck.amount});
+  if(p>=today)candidates.push({date:p,name:"Paycheck",amount:data.paycheck.checkingDeposit});
   let monthDate=new Date(today.getFullYear(),today.getMonth(),data.monthlyIncome.day);
   if(monthDate<today)monthDate=new Date(today.getFullYear(),today.getMonth()+1,data.monthlyIncome.day);
   candidates.push({date:monthDate,name:"Monthly income",amount:data.monthlyIncome.amount});
@@ -137,19 +168,24 @@ function financeStatus(){
   return {label:"⭐ Strong",cls:"strong"};
 }
 function paydayPlanRows(){
-  const paycheck=Number(data.paycheck.amount||0);
-  const checking=Number(data.balances.checking||0);
-  const shortfall=Math.max(0,-checking);
+  const deposit=Number(data.paycheck.checkingDeposit||0);
+  const currentChecking=Number(data.balances.checking||0);
   const p=nextPayday(), end=addDays(p,13);
-  const bills=eventsBetween(p,end).filter(e=>e.type==="bill").reduce((s,e)=>s-e.amount,0);
-  const essentials=weeklyAllowance()*2;
-  const bufferNeed=Math.max(0,Number(data.minimumBuffer||0)-Math.max(0,checking));
-  let remaining=paycheck-shortfall-bills-essentials-bufferNeed;
-  const roth=remaining>=data.paydayTransfers.roth?data.paydayTransfers.roth:0;
-  remaining-=roth;
-  const hysa=remaining>=data.paydayTransfers.hysa?data.paydayTransfers.hysa:0;
-  remaining-=hysa;
-  return {paycheck,shortfall,bills,essentials,bufferNeed,roth,hysa,remaining:Math.max(0,remaining)};
+
+  // Cash shortfall is handled by the actual starting balance, not double-counted.
+  const scheduled=eventsBetween(p,end);
+  const bills=scheduled.filter(e=>e.type==="bill").reduce((s,e)=>s-e.amount,0);
+  const otherIncome=scheduled.filter(e=>e.type==="income" && e.name!=="Paycheck deposit").reduce((s,e)=>s+e.amount,0);
+  const variableNeed=activeCycleNeed();
+
+  const projectedAfterDeposit=currentChecking+deposit+otherIncome-bills-variableNeed;
+  const bufferFloor=Number(data.minimumBuffer||0);
+  const protectedOverflow=Math.max(0,projectedAfterDeposit-bufferFloor);
+
+  return {
+    deposit,currentChecking,bills,otherIncome,variableNeed,
+    projectedAfterDeposit,bufferFloor,protectedOverflow
+  };
 }
 function ageHours(ts){
   if(!ts)return Infinity;
@@ -203,14 +239,14 @@ function renderHome(){
 
   const plan=paydayPlanRows();
   const rows=[
-    ["Paycheck",money(plan.paycheck)],
-    ...(plan.shortfall?[["Clear shortfall","−"+money(plan.shortfall)]]:[]),
-    ["Bills until following payday","−"+money(plan.bills)],
-    ["Two weeks necessities","−"+money(plan.essentials)],
-    ...(plan.bufferNeed?[["Restore checking floor","−"+money(plan.bufferNeed)]]:[]),
-    ["Roth IRA recommendation","−"+money(plan.roth)],
-    ["HYSA recommendation","−"+money(plan.hysa)],
-    ["Potential overflow",money(plan.remaining)]
+    ["Checking before payday",money(plan.currentChecking)],
+    ["Employer paycheck deposit",money(plan.deposit)],
+    ...(plan.otherIncome?[["Other income before next payday","+"+money(plan.otherIncome)]]:[]),
+    ["Bills before next payday","−"+money(plan.bills)],
+    ["Variable needs still active","−"+money(plan.variableNeed)],
+    ["Projected checking","="+money(plan.projectedAfterDeposit)],
+    ["Protected checking floor",money(plan.bufferFloor)],
+    ["Potential overflow","="+money(plan.protectedOverflow)]
   ];
   document.querySelector("#paydayPlan").innerHTML=rows.map(([a,b],i)=>`<div class="${i===rows.length-1?"total":""}"><span>${a}</span><strong>${b}</strong></div>`).join("");
 
@@ -264,7 +300,10 @@ function renderBusiness(){
 }
 function renderMore(){
   document.querySelector("#billList").innerHTML=data.bills.map((b,i)=>`<div class="setting-row"><div><strong>${b.name}</strong><div class="meta">${money(b.amount)} • ${b.day?ordinal(b.day):"date needed"} • ${b.autopay?"autopay":"manual"}</div></div><button onclick="editBill(${i})">Edit</button></div>`).join("");
-  document.querySelector("#essentialList").innerHTML=data.essentials.map(x=>`<div class="setting-row"><div><strong>${x.name}</strong><div class="meta">${money(x.amount)} / month</div></div></div>`).join("");
+  document.querySelector("#essentialList").innerHTML=data.essentials.map((x,i)=>{
+    const remaining=Math.max(0,Number(x.cycleNeed||0)-Number(x.spentThisCycle||0));
+    return `<div class="setting-row"><div><strong>${x.name}</strong><div class="meta">Monthly target ${money(x.monthlyTarget)} • This cycle ${x.active?money(x.cycleNeed):"$0"} • Spent ${money(x.spentThisCycle)} • Remaining ${money(x.active?remaining:0)}</div></div><button onclick="editEssential(${i})">Edit</button></div>`;
+  }).join("");
   document.querySelector("#incomeList").innerHTML=data.oneTimeIncome.length?data.oneTimeIncome.map(x=>`<div class="setting-row"><div><strong>${x.name}</strong><div class="meta">${money(x.amount)} • ${x.date}</div></div></div>`).join(""):`<div class="muted small">No one-time income entered yet.</div>`;
 }
 function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
@@ -292,8 +331,18 @@ document.querySelector("#affordBtn").onclick=()=>{
   }
 };
 document.querySelector("#addWeeklySpend").onclick=()=>{
-  showModal(`<div class="modal-stack"><h2>Add weekly spending</h2><label>Amount<input id="mSpend" class="modal-input" inputmode="decimal"></label><label>Note<input id="mNote" class="modal-input" placeholder="Groceries, gas, dinner..."></label></div>${modalActions("Add")}`);
-  document.querySelector("#modalSave").onclick=()=>{data.weeklySpent+=Number(document.querySelector("#mSpend").value||0);save()}
+  showModal(`<div class="modal-stack"><h2>Add variable spending</h2>
+    <label>Category<select id="mCategory" class="modal-input">${data.essentials.map(x=>`<option value="${x.id}">${x.name}</option>`).join("")}</select></label>
+    <label>Amount<input id="mSpend" class="modal-input" type="text" inputmode="decimal"></label>
+    <label>Note<input id="mNote" class="modal-input" placeholder="Optional note"></label>
+  </div>${modalActions("Add")}`);
+  document.querySelector("#modalSave").onclick=()=>{
+    const amt=Number(document.querySelector("#mSpend").value.replace(/[$,\\s]/g,"")||0);
+    const id=document.querySelector("#mCategory").value;
+    const x=data.essentials.find(e=>e.id===id);
+    if(x) x.spentThisCycle += amt;
+    save();
+  };
 };
 function openBalanceEditor(){
   showModal(`<div class="modal-stack"><h2>Update balances</h2>${Object.entries({checking:"Checking",savings:"Savings",hysa:"HYSA",k401:"401(k)",roth:"Roth IRA",creditCard:"Credit card balance"}).map(([k,l])=>`<label>${l}<input id="bal_${k}" class="modal-input" type="text" inputmode="${k==="checking"?"text":"decimal"}" value="${data.balances[k]}"></label>`).join("")}<p class="muted small">Checking accepts negative numbers such as -99.</p></div>${modalActions()}`);
@@ -327,6 +376,32 @@ window.editBill=(i)=>{
   showModal(`<div class="modal-stack"><h2>${i>=0?"Edit":"Add"} bill</h2><label>Name<input id="billName" class="modal-input" value="${b.name}"></label><label>Amount<input id="billAmount" class="modal-input" inputmode="decimal" value="${b.amount}"></label><label>Due day<input id="billDay" class="modal-input" inputmode="numeric" value="${b.day||""}" placeholder="1-31"></label><label><input id="billAuto" type="checkbox" ${b.autopay?"checked":""}> Autopay</label></div>${modalActions()}`);
   document.querySelector("#modalSave").onclick=()=>{const nb={id:b.id||Date.now().toString(),name:document.querySelector("#billName").value,amount:Number(document.querySelector("#billAmount").value||0),day:Number(document.querySelector("#billDay").value)||null,autopay:document.querySelector("#billAuto").checked};if(i>=0)data.bills[i]=nb;else data.bills.push(nb);save()}
 };
+
+window.editEssential=(i)=>{
+  const x=data.essentials[i];
+  showModal(`<div class="modal-stack"><h2>${x.name}</h2>
+    <label>Monthly target<input id="eMonthly" class="modal-input" type="text" inputmode="decimal" value="${x.monthlyTarget}"></label>
+    <label>Needed this pay cycle<input id="eCycle" class="modal-input" type="text" inputmode="decimal" value="${x.cycleNeed}"></label>
+    <label>Already spent this cycle<input id="eSpent" class="modal-input" type="text" inputmode="decimal" value="${x.spentThisCycle}"></label>
+    <label><input id="eActive" type="checkbox" ${x.active?"checked":""}> Include this category in current paycheck plan</label>
+    <p class="muted small">Set Needed this pay cycle to $0 or turn it off if you do not need to reserve money for it right now.</p>
+  </div>${modalActions()}`);
+  document.querySelector("#modalSave").onclick=()=>{
+    x.monthlyTarget=Number(document.querySelector("#eMonthly").value.replace(/[$,\\s]/g,"")||0);
+    x.cycleNeed=Number(document.querySelector("#eCycle").value.replace(/[$,\\s]/g,"")||0);
+    x.spentThisCycle=Number(document.querySelector("#eSpent").value.replace(/[$,\\s]/g,"")||0);
+    x.active=document.querySelector("#eActive").checked;
+    save();
+  };
+};
+
+window.recordCategorySpend=(id, amount)=>{
+  const x=data.essentials.find(e=>e.id===id);
+  if(!x) return;
+  x.spentThisCycle += Number(amount||0);
+  save();
+};
+
 document.querySelector("#notifyBtn").onclick=async()=>{
   if(!("Notification" in window)){alert("Notifications are not supported in this browser.");return}
   const p=await Notification.requestPermission();data.settings.notifications=p==="granted";save();alert(p==="granted"?"Notifications enabled.":"Notification permission was not granted.")
@@ -338,7 +413,7 @@ document.querySelector("#resetBtn").onclick=()=>{if(confirm("Reset all app data 
 document.querySelector("#settingsBtn").onclick=()=>document.querySelector('[data-nav="more"]').click();
 
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js?v=2.1",{updateViaCache:"none"}).then(reg=>{
+  navigator.serviceWorker.register("sw.js?v=2.2",{updateViaCache:"none"}).then(reg=>{
     reg.update();
   }).catch(()=>{});
 }
